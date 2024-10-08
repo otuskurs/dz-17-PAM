@@ -1,0 +1,43 @@
+---
+- hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+#1. Запретить всем пользователям, кроме группы admin логин в выходные (суббота и воскресенье), без учета праздников
+  - name: Создаем пользователя otusadm и задаем пароль
+    ansible.builtin.user:
+      name: otusadm
+      password: "{{ 'Otus2024!' | password_hash('sha256') }}"
+      shell: /bin/bash
+  - name: Создаем пользователя otus и задаем пароль
+    ansible.builtin.user:
+      name: otus
+      password: "{{ 'Otus2024!' | password_hash('sha256') }}"
+      shell: /bin/bash
+  - name: Создаём группу admin 
+    ansible.builtin.shell: | 
+      groupadd -f admin
+  - name: Добавляем пользователей alex,root и otusadm в группу admin 
+    ansible.builtin.shell: | 
+      usermod otusadm -a -G admin && usermod root -a -G admin && usermod alex -a -G admin
+  - name: Проверим, что пользователи в группе
+    ansible.builtin.shell: | 
+      cat /etc/group | grep admin
+    register: check_status_group_admin
+  - name: Выхлоп результата
+    ansible.builtin.debug: 
+      var: check_status_group_admin.stdout_lines
+  - name: Кидаем файл-скрипт 
+    ansible.builtin.copy:
+      src: /root/dz-17-PAM/Login.sh
+      dest: /usr/local/bin/login.sh
+  - name: Добавим права на исполнение файла 
+    ansible.builtin.shell: | 
+      chmod +x /usr/local/bin/login.sh  
+  - name: Кидаем файл-конфиг 
+    ansible.builtin.copy:
+      src: /root/dz-17-PAM/sshd
+      dest: /etc/pam.d/sshd
+
+
+      
